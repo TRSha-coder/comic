@@ -340,45 +340,48 @@ async function openVideoModal(anime) {
     await searchVideoSources(anime);
 }
 
+// Video source API
+// Note: Due to CORS restrictions, we'll use direct search links as primary method
+const VIDEO_SEARCH_SOURCES = [
+    { name: 'B站', searchUrl: 'https://search.bilibili.com/article?keyword=', searchParam: 'keyword' },
+    { name: '百度网盘', searchUrl: 'https://www.baidu.com/s?wd=', searchParam: 'wd' },
+    { name: '阿里云盘', searchUrl: 'https://www.alipan.com/search?keyword=', searchParam: 'keyword' }
+];
+
 async function searchVideoSources(anime) {
     try {
         // Use title to search for video sources
         const searchTitle = anime.title_english || anime.title;
         
-        // Try to fetch from API (using JSONP or proxy)
-        const searchUrl = `${API_BASE}/yingshi?msg=${encodeURIComponent(searchTitle)}`;
-        
-        const response = await fetch(searchUrl);
-        const data = await response.json();
-        
         videoLoading.style.display = 'none';
         document.querySelector('.video-player-container').style.display = 'block';
         
-        if (data && data.code === 200 && data.data) {
-            videoSources = data.data;
-            renderVideoSources();
-            renderEpisodes();
-            
-            // Auto play first source
-            if (videoSources.length > 0) {
-                playVideo(videoSources[0].url);
-            }
-        } else {
-            showVideoError('未找到播放源');
+        // Create search source buttons
+        videoSources = VIDEO_SEARCH_SOURCES.map((source, index) => ({
+            name: source.name,
+            url: `${source.searchUrl}${encodeURIComponent(searchTitle)}`,
+            isExternal: true
+        }));
+        
+        renderVideoSources(searchTitle);
+        renderEpisodes();
+        
+        // Auto open first source in new tab
+        if (videoSources.length > 0) {
+            window.open(videoSources[0].url, '_blank');
         }
     } catch (error) {
         console.error('Error searching video sources:', error);
         videoLoading.style.display = 'none';
         document.querySelector('.video-player-container').style.display = 'block';
         
-        // Fallback: show message to open in new tab
         showVideoError('无法自动播放，请点击上方链接跳转观看');
     }
 }
 
-function renderVideoSources() {
+function renderVideoSources(searchTitle) {
     sourcesList.innerHTML = videoSources.map((source, index) => `
-        <button class="source-btn" data-url="${source.url}" data-index="${index}">
+        <button class="source-btn ${index === 0 ? 'active' : ''}" data-url="${source.url}" data-index="${index}" data-external="${source.isExternal ? 'true' : 'false'}">
             ${source.name || `播放源 ${index + 1}`}
         </button>
     `).join('');
@@ -387,7 +390,8 @@ function renderVideoSources() {
     sourcesList.querySelectorAll('.source-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const url = btn.dataset.url;
-            playVideo(url);
+            const isExternal = btn.dataset.external === 'true';
+            playVideo(url, isExternal);
         });
     });
 }
@@ -416,11 +420,20 @@ function renderEpisodes() {
     }
 }
 
-function playVideo(url) {
+function playVideo(url, isExternal = false) {
     const videoEmbed = document.getElementById('videoEmbed');
     
-    // Check if it's a direct video URL or needs iframe
-    if (url.includes('iframe') || url.startsWith('http')) {
+    if (isExternal) {
+        // Open external link in new tab
+        window.open(url, '_blank');
+        videoEmbed.innerHTML = `
+            <div class="video-external">
+                <i class="fas fa-external-link-alt"></i>
+                <p>正在跳转到播放页面...</p>
+                <a href="${url}" target="_blank" class="btn btn-primary">点击打开</a>
+            </div>
+        `;
+    } else if (url.includes('iframe') || url.startsWith('http')) {
         videoEmbed.innerHTML = `<iframe src="${url}" frameborder="0" allowfullscreen></iframe>`;
     } else {
         videoEmbed.innerHTML = `<video controls><source src="${url}" type="video/mp4">您的浏览器不支持视频播放</video>`;

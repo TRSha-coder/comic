@@ -767,6 +767,22 @@ main {
     margin-bottom: 1rem;
 }
 
+.video-external {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+}
+
+.video-external i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+}
+
+.video-external p {
+    margin-bottom: 1rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .header-content {
