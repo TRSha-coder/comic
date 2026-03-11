@@ -542,43 +542,156 @@ function showLocalVideoInput() {
     videoEmbed.innerHTML = `
         <div class="local-video-input">
             <h3>📺 输入视频地址播放</h3>
-            <p>支持 MP4, WebM, M3U8 (HLS) 等格式</p>
+            <p>支持的格式：M3U8 (流媒体)、MP4、WebM、MKV、FLV</p>
             <input type="text" id="videoUrlInput" placeholder="粘贴视频URL..." 
                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin: 10px 0;">
             <button class="btn btn-primary" onclick="playLocalVideo()">
                 <i class="fas fa-play"></i> 播放
             </button>
+            <div style="margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 8px; font-size: 12px;">
+                <strong>💡 提示：</strong>
+                <ul style="margin: 5px 0; padding-left: 20px;">
+                    <li>M3U8 - 最常见的在线流媒体格式</li>
+                    <li>直链视频可直接粘贴播放</li>
+                    <li>如遇播放问题，请检查视频链接是否有效</li>
+                </ul>
+            </div>
         </div>
     `;
 }
 
-// Play local video using Video.js
+// Play local video using Video.js with HLS support
 function playLocalVideo() {
     const url = document.getElementById('videoUrlInput').value.trim();
     if (!url) {
         alert('请输入视频地址');
         return;
     }
-    
+
     const videoEmbed = document.getElementById('videoEmbed');
-    
+
+    // 清理之前的播放器
     if (currentVideoPlayer) {
-        currentVideoPlayer.dispose();
+        if (typeof currentVideoPlayer.dispose === 'function') {
+            currentVideoPlayer.dispose();
+        }
+        currentVideoPlayer = null;
     }
-    
+
+    // 检测视频格式
+    const isM3U8 = url.includes('.m3u8') || url.includes('m3u8');
+    const isMP4 = url.includes('.mp4');
+    const isWebM = url.includes('.webm');
+    const isMKV = url.includes('.mkv');
+    const isFlv = url.includes('.flv');
+
+    let videoType = 'video/mp4';
+    if (isM3U8) {
+        videoType = 'application/x-mpegURL';
+    } else if (isWebM) {
+        videoType = 'video/webm';
+    } else if (isMKV) {
+        videoType = 'video/x-matroska';
+    } else if (isFlv) {
+        videoType = 'video/x-flv';
+    }
+
     videoEmbed.innerHTML = `
-        <video id="local-video-player" class="video-js vjs-big-play-centered" 
-               controls preload="auto" width="100%" height="400"
-               data-setup='{"fluid": true}'>
-            <source src="${url}" type="video/mp4" />
+        <video id="local-video-player" class="video-js vjs-big-play-centered vjs-fluid" 
+               controls preload="auto" playsinline crossorigin="anonymous"
+               data-setup='{"html5": {"vhs": {"overrideNative": true}}}'>
+            <source src="${url}" type="${videoType}" />
             <p class="vjs-no-js">您的浏览器不支持视频播放</p>
         </video>
     `;
-    
-    currentVideoPlayer = videojs('local-video-player');
-    currentVideoPlayer.play().catch(e => {
-        console.error('播放失败:', e);
-    });
+
+    const videoElement = document.getElementById('local-video-player');
+
+    // M3U8流媒体播放
+    if (isM3U8 && Hls.isSupported()) {
+        const hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 90
+        });
+        hls.loadSource(url);
+        hls.attachMedia(videoElement);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, function() {
+            console.log('HLS 加载成功');
+            videoElement.play().catch(e => {
+                console.log('自动播放被阻止，请手动点击播放');
+            });
+        });
+
+        hls.on(Hls.Events.ERROR, function(event, data) {
+            console.error('HLS 错误:', data);
+            if (data.fatal) {
+                switch (data.type) {
+                    case Hls.ErrorTypes.NETWORK_ERROR:
+                        showVideoError('网络错误，尝试恢复...');
+                        hls.startLoad();
+                        break;
+                    case Hls.ErrorTypes.MEDIA_ERROR:
+                        showVideoError('媒体错误，尝试恢复...');
+                        hls.recoverMediaError();
+                        break;
+                    default:
+                        showVideoError('播放失败，请检查视频地址是否正确');
+                        hls.destroy();
+                        break;
+                }
+            }
+        });
+
+        // 存储hls实例以便清理
+        currentVideoPlayer = {
+            dispose: function() {
+                hls.destroy();
+            }
+        };
+    }
+    // Safari原生支持HLS
+    else if (isM3U8 && videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+        videoElement.src = url;
+        videoElement.addEventListener('loadedmetadata', function() {
+            videoElement.play().catch(e => {
+                console.log('自动播放被阻止');
+            });
+        });
+    }
+    // 其他格式使用Video.js
+    else {
+        currentVideoPlayer = videojs('local-video-player', {
+            html5: {
+                vhs: {
+                    overrideNative: true
+                }
+            }
+        });
+
+        currentVideoPlayer.src({
+            src: url,
+            type: videoType
+        });
+
+        currentVideoPlayer.play().catch(e => {
+            console.error('播放失败:', e);
+        });
+
+        currentVideoPlayer.on('error', function() {
+            console.error('Video.js 错误:', this.error());
+            showVideoError('播放失败，请检查视频地址是否正确');
+        });
+    }
+
+    // 显示格式提示
+    const formatName = isM3U8 ? 'HLS (M3U8) 流媒体' :
+                       isMP4 ? 'MP4' :
+                       isWebM ? 'WebM' :
+                       isMKV ? 'MKV' :
+                       isFlv ? 'FLV' : '视频';
+    console.log('正在播放:', formatName);
 }
 
 function renderEpisodes() {
