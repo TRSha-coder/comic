@@ -148,7 +148,7 @@ function createAnimeCard(anime) {
     
     const isFavorite = favorites.includes(anime.id);
     const imageUrl = anime.images?.jpg?.image_url || anime.images?.webp?.image_url || 'https://via.placeholder.com/300x450';
-    const title = anime.title || 'Unknown';
+    const title = anime.title_english || anime.title || 'Unknown';
     const score = anime.score || 'N/A';
     const rank = anime.rank || '';
     const type = anime.type || 'Unknown';
@@ -198,10 +198,14 @@ function filterAnime() {
     const status = statusFilter.value;
     
     let filtered = animeList.filter(anime => {
-        // Search filter
+        // Search filter - support multiple languages
+        const searchLower = searchTerm.toLowerCase();
         const titleMatch = !searchTerm || 
-            (anime.title && anime.title.toLowerCase().includes(searchTerm)) ||
-            (anime.title_english && anime.title_english.toLowerCase().includes(searchTerm));
+            (anime.title && anime.title.toLowerCase().includes(searchLower)) ||
+            (anime.title_english && anime.title_english.toLowerCase().includes(searchLower)) ||
+            (anime.title_japanese && anime.title_japanese.toLowerCase().includes(searchLower)) ||
+            (anime.synopsis && anime.synopsis.toLowerCase().includes(searchLower)) ||
+            (anime.genres && anime.genres.some(g => g.toLowerCase().includes(searchLower)));
         
         // Type filter
         const typeMatch = !type || anime.type === type;
@@ -344,8 +348,10 @@ async function openVideoModal(anime) {
 // Note: Due to CORS restrictions, we'll use direct search links as primary method
 const VIDEO_SEARCH_SOURCES = [
     { name: 'B站', searchUrl: 'https://search.bilibili.com/article?keyword=', searchParam: 'keyword' },
+    { name: '百度视频', searchUrl: 'https://v.baidu.com/v?ct=301989888&s=25&word=', searchParam: 'word' },
     { name: '百度网盘', searchUrl: 'https://www.baidu.com/s?wd=', searchParam: 'wd' },
-    { name: '阿里云盘', searchUrl: 'https://www.alipan.com/search?keyword=', searchParam: 'keyword' }
+    { name: '阿里云盘', searchUrl: 'https://www.alipan.com/search?keyword=', searchParam: 'keyword' },
+    { name: '夸克网盘', searchUrl: 'https://pan.quark.cn/search?keyword=', searchParam: 'keyword' }
 ];
 
 async function searchVideoSources(anime) {
