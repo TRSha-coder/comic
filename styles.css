@@ -702,6 +702,34 @@ main {
     border-color: var(--primary-color);
 }
 
+/* Source Group Styles */
+.source-group {
+    margin-bottom: 1rem;
+}
+
+.source-group:last-child {
+    margin-bottom: 0;
+}
+
+.source-group-title {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.source-group .source-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.source-group .source-btn i {
+    font-size: 0.9rem;
+}
+
 .video-episodes {
     padding: 1rem 1.5rem;
     max-height: 200px;

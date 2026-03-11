@@ -347,47 +347,145 @@ async function openVideoModal(anime) {
 // Video source API
 // Note: Due to CORS restrictions, we'll use direct search links as primary method
 const VIDEO_SEARCH_SOURCES = [
-    { name: 'B站', searchUrl: 'https://search.bilibili.com/article?keyword=', searchParam: 'keyword' },
-    { name: '百度视频', searchUrl: 'https://v.baidu.com/v?ct=301989888&s=25&word=', searchParam: 'word' },
-    { name: '百度网盘', searchUrl: 'https://www.baidu.com/s?wd=', searchParam: 'wd' },
-    { name: '阿里云盘', searchUrl: 'https://www.alipan.com/search?keyword=', searchParam: 'keyword' },
-    { name: '夸克网盘', searchUrl: 'https://pan.quark.cn/search?keyword=', searchParam: 'keyword' }
+    { name: 'B站', searchUrl: 'https://search.bilibili.com/video?keyword=', searchParam: 'keyword', icon: 'bilibili' },
+    { name: 'B站漫画', searchUrl: 'https://manga.bilibili.com/search?word=', searchParam: 'word', icon: 'bilibili' },
+    { name: '百度网盘', searchUrl: 'https://pan.baidu.com/search?keyword=', searchParam: 'word', icon: 'cloud' },
+    { name: '阿里云盘', searchUrl: 'https://www.alipan.com/search?keyword=', searchParam: 'keyword', icon: 'cloud' },
+    { name: '夸克网盘', searchUrl: 'https://pan.quark.cn/search?keyword=', searchParam: 'keyword', icon: 'cloud' },
+    { name: '抖音', searchUrl: 'https://www.douyin.com/search/', searchParam: 'search_keyword', icon: 'video' },
+    { name: 'AcFun', searchUrl: 'https://www.acfun.cn/search/?keyword=', searchParam: 'keyword', icon: 'acfun' },
+    { name: '知乎', searchUrl: 'https://www.zhihu.com/search?q=', searchParam: 'q', icon: 'zhihu' }
 ];
+
+// Video source quality categories
+const SOURCE_CATEGORIES = {
+    primary: ['B站', 'B站漫画', 'AcFun'],
+    cloud: ['百度网盘', '阿里云盘', '夸克网盘'],
+    social: ['抖音', '知乎']
+};
 
 async function searchVideoSources(anime) {
     try {
         // Use English title for search (more likely to work on Chinese platforms)
+        // Also try Japanese title for better results
         const searchTitle = anime.title_english || anime.title;
-        
+        const searchJapanese = anime.titleTitle_japanese || '';
+
         videoLoading.style.display = 'none';
         document.querySelector('.video-player-container').style.display = 'block';
-        
-        // Create search source buttons
-        videoSources = VIDEO_SEARCH_SOURCES.map((source) => ({
-            name: source.name,
-            url: `${source.searchUrl}${encodeURIComponent(searchTitle)}`,
-            isExternal: true
-        }));
-        
+
+        // Create search source buttons with better titles
+        videoSources = VIDEO_SEARCH_SOURCES.map((source) => {
+            // Generate optimized search query
+            let query = searchTitle;
+
+            // For cloud storage sources, add common anime naming patterns
+            if (source.name.includes('网盘') || source.name.includes('云盘')) {
+                query = `${searchTitle} 动漫`; // Add anime keyword for better cloud storage results
+            }
+
+            return {
+                name: source.name,
+                category: getSourceCategory(source.name),
+                url: `${source.searchUrl}${encodeURIComponent(query)}`,
+                icon: source.icon || 'external-link',
+                isExternal: true
+            };
+        });
+
         renderVideoSources(searchTitle);
         renderEpisodes();
-        
-        // Removed: Auto open first source - user can click manually
+
+        // Auto-open B站 as primary source for better UX
+        const bilibiliSource = videoSources.find(s => s.name === 'B站');
+        if (bilibiliSource) {
+            // Pre-select B站 but don't auto-open
+            console.log('Primary source available: B站');
+        }
+
     } catch (error) {
         console.error('Error searching video sources:', error);
         videoLoading.style.display = 'none';
         document.querySelector('.video-player-container').style.display = 'block';
-        
+
         showVideoError('无法自动播放，请点击上方链接跳转观看');
     }
 }
 
+// Get source category for UI grouping
+function getSourceCategory(sourceName) {
+    if (SOURCE_CATEGORIES.primary.includes(sourceName)) return 'primary';
+    if (SOURCE_CATEGORIES.cloud.includes(sourceName)) return 'cloud';
+    if (SOURCE_CATEGORIES.social.includes(sourceName)) return 'social';
+    return 'other';
+}
+
+// Get icon name for each source
+function getSourceIcon(sourceName) {
+    const icons = {
+        'B站': 'tv',
+        'B站漫画': 'book-open',
+        '百度网盘': 'cloud',
+        '阿里云盘': 'cloud',
+        '夸克网盘': 'cloud',
+        '抖音': 'video',
+        'AcFun': 'play-circle',
+        '知乎': 'comment'
+    };
+    return icons[sourceName] || 'external-link-alt';
+}
+
 function renderVideoSources(searchTitle) {
-    sourcesList.innerHTML = videoSources.map((source, index) => `
-        <button class="source-btn ${index === 0 ? 'active' : ''}" data-url="${source.url}" data-index="${index}" data-external="${source.isExternal ? 'true' : 'false'}">
-            ${source.name || `播放源 ${index + 1}`}
-        </button>
-    `).join('');
+    // Group sources by category
+    const groupedSources = {
+        primary: [],
+        cloud: [],
+        social: [],
+        other: []
+    };
+
+    videoSources.forEach((source, index) => {
+        const category = source.category || 'other';
+        if (!groupedSources[category]) groupedSources[category] = [];
+        groupedSources[category].push({ ...source, originalIndex: index });
+    });
+
+    let html = '';
+
+    // Primary sources (video platforms)
+    if (groupedSources.primary.length > 0) {
+        html += `<div class="source-group"><span class="source-group-title">在线观看</span>`;
+        html += groupedSources.primary.map((source, idx) => `
+            <button class="source-btn ${source.originalIndex === 0 ? 'active' : ''}" data-url="${source.url}" data-index="${source.originalIndex}" data-external="true">
+                <i class="fas fa-${getSourceIcon(source.name)}"></i> ${source.name}
+            </button>
+        `).join('');
+        html += `</div>`;
+    }
+
+    // Cloud storage sources
+    if (groupedSources.cloud.length > 0) {
+        html += `<div class="source-group"><span class="source-group-title">网盘资源</span>`;
+        html += groupedSources.cloud.map((source, idx) => `
+            <button class="source-btn" data-url="${source.url}" data-index="${source.originalIndex}" data-external="true">
+                <i class="fas fa-${getSourceIcon(source.name)}"></i> ${source.name}
+            </button>
+        `).join('');
+        html += `</div>`;
+    }
+
+    // Social sources
+    if (groupedSources.social.length > 0) {
+        html += `<div class="source-group"><span class="source-group-title">社交平台</span>`;
+        html += groupedSources.social.map((source, idx) => `
+            <button class="source-btn" data-url="${source.url}" data-index="${source.originalIndex}" data-external="true">
+                <i class="fas fa-${getSourceIcon(source.name)}"></i> ${source.name}
+            </button>
+        `).join('');
+        html += `</div>`;
+    }
+
+    sourcesList.innerHTML = html;
     
     // Add click listeners
     sourcesList.querySelectorAll('.source-btn').forEach(btn => {
