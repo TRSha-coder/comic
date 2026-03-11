@@ -356,18 +356,34 @@ const VIDEO_SEARCH_SOURCES = [
 
 async function searchVideoSources(anime) {
     try {
-        // Use title to search for video sources
-        const searchTitle = anime.title_english || anime.title;
+        // Use title to search for video sources - prefer Chinese/English title
+        let searchTitle = anime.title_english || anime.title;
+        
+        // If title_english is English, also try Japanese title for better Chinese results
+        const fallbackTitle = anime.title_japanese || anime.title;
         
         videoLoading.style.display = 'none';
         document.querySelector('.video-player-container').style.display = 'block';
         
-        // Create search source buttons
-        videoSources = VIDEO_SEARCH_SOURCES.map((source, index) => ({
-            name: source.name,
-            url: `${source.searchUrl}${encodeURIComponent(searchTitle)}`,
-            isExternal: true
-        }));
+        // Create search source buttons - add multiple search options
+        const sourcesWithSearch = [];
+        VIDEO_SEARCH_SOURCES.forEach(source => {
+            // Add primary title search
+            sourcesWithSearch.push({
+                name: source.name,
+                url: `${source.searchUrl}${encodeURIComponent(searchTitle)}`,
+                isExternal: true
+            });
+            // Add fallback title search (different title = different button)
+            if (fallbackTitle !== searchTitle) {
+                sourcesWithSearch.push({
+                    name: `${source.name} (备选)`,
+                    url: `${source.searchUrl}${encodeURIComponent(fallbackTitle)}`,
+                    isExternal: true
+                });
+            }
+        });
+        videoSources = sourcesWithSearch;
         
         renderVideoSources(searchTitle);
         renderEpisodes();
