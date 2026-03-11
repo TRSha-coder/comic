@@ -356,42 +356,23 @@ const VIDEO_SEARCH_SOURCES = [
 
 async function searchVideoSources(anime) {
     try {
-        // Use title to search for video sources - prefer Chinese/English title
-        let searchTitle = anime.title_english || anime.title;
-        
-        // If title_english is English, also try Japanese title for better Chinese results
-        const fallbackTitle = anime.title_japanese || anime.title;
+        // Use English title for search (more likely to work on Chinese platforms)
+        const searchTitle = anime.title_english || anime.title;
         
         videoLoading.style.display = 'none';
         document.querySelector('.video-player-container').style.display = 'block';
         
-        // Create search source buttons - add multiple search options
-        const sourcesWithSearch = [];
-        VIDEO_SEARCH_SOURCES.forEach(source => {
-            // Add primary title search
-            sourcesWithSearch.push({
-                name: source.name,
-                url: `${source.searchUrl}${encodeURIComponent(searchTitle)}`,
-                isExternal: true
-            });
-            // Add fallback title search (different title = different button)
-            if (fallbackTitle !== searchTitle) {
-                sourcesWithSearch.push({
-                    name: `${source.name} (备选)`,
-                    url: `${source.searchUrl}${encodeURIComponent(fallbackTitle)}`,
-                    isExternal: true
-                });
-            }
-        });
-        videoSources = sourcesWithSearch;
+        // Create search source buttons
+        videoSources = VIDEO_SEARCH_SOURCES.map((source) => ({
+            name: source.name,
+            url: `${source.searchUrl}${encodeURIComponent(searchTitle)}`,
+            isExternal: true
+        }));
         
         renderVideoSources(searchTitle);
         renderEpisodes();
         
-        // Auto open first source in new tab
-        if (videoSources.length > 0) {
-            window.open(videoSources[0].url, '_blank');
-        }
+        // Removed: Auto open first source - user can click manually
     } catch (error) {
         console.error('Error searching video sources:', error);
         videoLoading.style.display = 'none';
