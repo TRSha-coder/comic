@@ -354,21 +354,16 @@ const VIDEO_SEARCH_SOURCES = [
     { name: '优酷', searchUrl: 'https://search.youku.com/search_video?keyword=', searchParam: 'keyword', icon: 'youku' },
     { name: '爱奇艺', searchUrl: 'https://so.iq.com/?w=', searchParam: 'w', icon: 'iqiyi' },
     { name: '腾讯视频', searchUrl: 'https://v.qq.com/x/search/?q=', searchParam: 'q', icon: 'tencent' },
-    // 第三方动漫观看网站
-    { name: '樱花动漫', searchUrl: 'https://www.yinghuacd.com/search?searchword=', searchParam: 'searchword', icon: 'flower' },
-    { name: '茶杯头', searchUrl: 'https://www.cupfox.app/search?key=', searchParam: 'key', icon: 'cup' },
-    { name: '低端影视', searchUrl: 'https://ddys.tv/?s=', searchParam: 's', icon: 'film' },
-    { name: '不止影视', searchUrl: 'https://www.buzhi.tv/?s=', searchParam: 's', icon: 'play' },
-    { name: '厂长资源', searchUrl: 'https://www.changzhangquan.com/search?q=', searchParam: 'q', icon: 'film' },
-    { name: '莫扎影视', searchUrl: 'https://www.mozhatv.com/search?q=', searchParam: 'q', icon: 'video' },
-    { name: 'libvio', searchUrl: 'https://www.libvio.me/search?searchword=', searchParam: 'searchword', icon: 'play' },
-    { name: 'AGE动漫', searchUrl: 'https://www.agem.net/search?search_keyword=', searchParam: 'search_keyword', icon: 'age' }
+    // 第三方动漫网站 (使用搜索引擎)
+    { name: 'Google', searchUrl: 'https://www.google.com/search?q=', searchParam: 'q', icon: 'google' },
+    { name: 'Bing', searchUrl: 'https://www.bing.com/search?q=', searchParam: 'q', icon: 'bing' },
+    { name: '百度', searchUrl: 'https://www.baidu.com/s?wd=', searchParam: 'wd', icon: 'baidu' }
 ];
 
 // Video source quality categories
 const SOURCE_CATEGORIES = {
     primary: ['B站', 'B站漫画', 'AcFun', '优酷', '爱奇艺', '腾讯视频'],
-    anime: ['樱花动漫', '茶杯头', '低端影视', '不止影视', '厂长资源', '莫扎影视', 'libvio', 'AGE动漫']
+    search: ['Google', 'Bing', '百度']
 };
 
 async function searchVideoSources(anime) {
@@ -414,7 +409,7 @@ async function searchVideoSources(anime) {
 // Get source category for UI grouping
 function getSourceCategory(sourceName) {
     if (SOURCE_CATEGORIES.primary.includes(sourceName)) return 'primary';
-    if (SOURCE_CATEGORIES.anime.includes(sourceName)) return 'anime';
+    if (SOURCE_CATEGORIES.search.includes(sourceName)) return 'search';
     return 'other';
 }
 
@@ -427,14 +422,9 @@ function getSourceIcon(sourceName) {
         '优酷': 'youku',
         '爱奇艺': 'iqiyi',
         '腾讯视频': 'tencent',
-        '樱花动漫': 'flower',
-        '茶杯头': 'coffee',
-        '低端影视': 'film',
-        '不止影视': 'play',
-        '厂长资源': 'film',
-        '莫扎影视': 'video',
-        'libvio': 'play-circle',
-        'AGE动漫': 'age'
+        'Google': 'google',
+        'Bing': 'bing',
+        '百度': 'baidu'
     };
     return icons[sourceName] || 'external-link-alt';
 }
@@ -443,7 +433,7 @@ function renderVideoSources(searchTitle) {
     // Group sources by category
     const groupedSources = {
         primary: [],
-        anime: [],
+        search: [],
         other: []
     };
 
@@ -466,10 +456,10 @@ function renderVideoSources(searchTitle) {
         html += `</div>`;
     }
 
-    // Anime websites
-    if (groupedSources.anime.length > 0) {
-        html += `<div class="source-group"><span class="source-group-title">动漫网站</span>`;
-        html += groupedSources.anime.map((source, idx) => `
+    // Search engines
+    if (groupedSources.search.length > 0) {
+        html += `<div class="source-group"><span class="source-group-title">搜索引擎</span>`;
+        html += groupedSources.search.map((source, idx) => `
             <button class="source-btn" data-url="${source.url}" data-index="${source.originalIndex}" data-external="true">
                 <i class="fas fa-${getSourceIcon(source.name)}"></i> ${source.name}
             </button>

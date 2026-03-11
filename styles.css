@@ -736,14 +736,12 @@ main {
 .source-group .source-btn .fa-iqiyi { color: #00bf20; }
 .source-group .source-btn .fa-tencent { color: #12b7f5; }
 .source-group .source-btn .fa-acfun { color: #fc5e3e; }
-.source-group .source-btn .fa-flower { color: #ff6b6b; }
-.source-group .source-btn .fa-coffee { color: #8b4513; }
-.source-group .source-btn .fa-play { color: #ff9500; }
-.source-group .source-btn .fa-film { color: #ff6b6b; }
-.source-group .source-btn .fa-age { color: #ff69b4; }
 .source-group .source-btn .fa-book-open { color: #fb7299; }
 .source-group .source-btn .fa-play-circle { color: #ff6b6b; }
 .source-group .source-btn .fa-tv { color: #00a1d6; }
+.source-group .source-btn .fa-google { color: #4285f4; }
+.source-group .source-btn .fa-bing { color: #00809d; }
+.source-group .source-btn .fa-baidu { color: #2932e1; }
 
 .video-episodes {
     padding: 1rem 1.5rem;
