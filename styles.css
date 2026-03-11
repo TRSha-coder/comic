@@ -730,6 +730,21 @@ main {
     font-size: 0.9rem;
 }
 
+/* 品牌图标自定义样式 */
+.source-group .source-btn .fa-bilibili { color: #00a1d6; }
+.source-group .source-btn .fa-youku { color: #00b5e5; }
+.source-group .source-btn .fa-iqiyi { color: #00bf20; }
+.source-group .source-btn .fa-tencent { color: #12b7f5; }
+.source-group .source-btn .fa-acfun { color: #fc5e3e; }
+.source-group .source-btn .fa-flower { color: #ff6b6b; }
+.source-group .source-btn .fa-coffee { color: #8b4513; }
+.source-group .source-btn .fa-play { color: #ff9500; }
+.source-group .source-btn .fa-film { color: #ff6b6b; }
+.source-group .source-btn .fa-age { color: #ff69b4; }
+.source-group .source-btn .fa-book-open { color: #fb7299; }
+.source-group .source-btn .fa-play-circle { color: #ff6b6b; }
+.source-group .source-btn .fa-tv { color: #00a1d6; }
+
 .video-episodes {
     padding: 1rem 1.5rem;
     max-height: 200px;

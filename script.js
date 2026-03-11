@@ -347,21 +347,28 @@ async function openVideoModal(anime) {
 // Video source API
 // Note: Due to CORS restrictions, we'll use direct search links as primary method
 const VIDEO_SEARCH_SOURCES = [
+    // 主流视频平台
     { name: 'B站', searchUrl: 'https://search.bilibili.com/video?keyword=', searchParam: 'keyword', icon: 'bilibili' },
     { name: 'B站漫画', searchUrl: 'https://manga.bilibili.com/search?word=', searchParam: 'word', icon: 'bilibili' },
-    { name: '百度网盘', searchUrl: 'https://pan.baidu.com/search?keyword=', searchParam: 'word', icon: 'cloud' },
-    { name: '阿里云盘', searchUrl: 'https://www.alipan.com/search?keyword=', searchParam: 'keyword', icon: 'cloud' },
-    { name: '夸克网盘', searchUrl: 'https://pan.quark.cn/search?keyword=', searchParam: 'keyword', icon: 'cloud' },
-    { name: '抖音', searchUrl: 'https://www.douyin.com/search/', searchParam: 'search_keyword', icon: 'video' },
     { name: 'AcFun', searchUrl: 'https://www.acfun.cn/search/?keyword=', searchParam: 'keyword', icon: 'acfun' },
-    { name: '知乎', searchUrl: 'https://www.zhihu.com/search?q=', searchParam: 'q', icon: 'zhihu' }
+    { name: '优酷', searchUrl: 'https://search.youku.com/search_video?keyword=', searchParam: 'keyword', icon: 'youku' },
+    { name: '爱奇艺', searchUrl: 'https://so.iq.com/?w=', searchParam: 'w', icon: 'iqiyi' },
+    { name: '腾讯视频', searchUrl: 'https://v.qq.com/x/search/?q=', searchParam: 'q', icon: 'tencent' },
+    // 第三方动漫观看网站
+    { name: '樱花动漫', searchUrl: 'https://www.yinghuacd.com/search?searchword=', searchParam: 'searchword', icon: 'flower' },
+    { name: '茶杯头', searchUrl: 'https://www.cupfox.app/search?key=', searchParam: 'key', icon: 'cup' },
+    { name: '低端影视', searchUrl: 'https://ddys.tv/?s=', searchParam: 's', icon: 'film' },
+    { name: '不止影视', searchUrl: 'https://www.buzhi.tv/?s=', searchParam: 's', icon: 'play' },
+    { name: '厂长资源', searchUrl: 'https://www.changzhangquan.com/search?q=', searchParam: 'q', icon: 'film' },
+    { name: '莫扎影视', searchUrl: 'https://www.mozhatv.com/search?q=', searchParam: 'q', icon: 'video' },
+    { name: 'libvio', searchUrl: 'https://www.libvio.me/search?searchword=', searchParam: 'searchword', icon: 'play' },
+    { name: 'AGE动漫', searchUrl: 'https://www.agem.net/search?search_keyword=', searchParam: 'search_keyword', icon: 'age' }
 ];
 
 // Video source quality categories
 const SOURCE_CATEGORIES = {
-    primary: ['B站', 'B站漫画', 'AcFun'],
-    cloud: ['百度网盘', '阿里云盘', '夸克网盘'],
-    social: ['抖音', '知乎']
+    primary: ['B站', 'B站漫画', 'AcFun', '优酷', '爱奇艺', '腾讯视频'],
+    anime: ['樱花动漫', '茶杯头', '低端影视', '不止影视', '厂长资源', '莫扎影视', 'libvio', 'AGE动漫']
 };
 
 async function searchVideoSources(anime) {
@@ -376,18 +383,10 @@ async function searchVideoSources(anime) {
 
         // Create search source buttons with better titles
         videoSources = VIDEO_SEARCH_SOURCES.map((source) => {
-            // Generate optimized search query
-            let query = searchTitle;
-
-            // For cloud storage sources, add common anime naming patterns
-            if (source.name.includes('网盘') || source.name.includes('云盘')) {
-                query = `${searchTitle} 动漫`; // Add anime keyword for better cloud storage results
-            }
-
             return {
                 name: source.name,
                 category: getSourceCategory(source.name),
-                url: `${source.searchUrl}${encodeURIComponent(query)}`,
+                url: `${source.searchUrl}${encodeURIComponent(searchTitle)}`,
                 icon: source.icon || 'external-link',
                 isExternal: true
             };
@@ -415,8 +414,7 @@ async function searchVideoSources(anime) {
 // Get source category for UI grouping
 function getSourceCategory(sourceName) {
     if (SOURCE_CATEGORIES.primary.includes(sourceName)) return 'primary';
-    if (SOURCE_CATEGORIES.cloud.includes(sourceName)) return 'cloud';
-    if (SOURCE_CATEGORIES.social.includes(sourceName)) return 'social';
+    if (SOURCE_CATEGORIES.anime.includes(sourceName)) return 'anime';
     return 'other';
 }
 
@@ -425,12 +423,18 @@ function getSourceIcon(sourceName) {
     const icons = {
         'B站': 'tv',
         'B站漫画': 'book-open',
-        '百度网盘': 'cloud',
-        '阿里云盘': 'cloud',
-        '夸克网盘': 'cloud',
-        '抖音': 'video',
         'AcFun': 'play-circle',
-        '知乎': 'comment'
+        '优酷': 'youku',
+        '爱奇艺': 'iqiyi',
+        '腾讯视频': 'tencent',
+        '樱花动漫': 'flower',
+        '茶杯头': 'coffee',
+        '低端影视': 'film',
+        '不止影视': 'play',
+        '厂长资源': 'film',
+        '莫扎影视': 'video',
+        'libvio': 'play-circle',
+        'AGE动漫': 'age'
     };
     return icons[sourceName] || 'external-link-alt';
 }
@@ -439,8 +443,7 @@ function renderVideoSources(searchTitle) {
     // Group sources by category
     const groupedSources = {
         primary: [],
-        cloud: [],
-        social: [],
+        anime: [],
         other: []
     };
 
@@ -463,21 +466,10 @@ function renderVideoSources(searchTitle) {
         html += `</div>`;
     }
 
-    // Cloud storage sources
-    if (groupedSources.cloud.length > 0) {
-        html += `<div class="source-group"><span class="source-group-title">网盘资源</span>`;
-        html += groupedSources.cloud.map((source, idx) => `
-            <button class="source-btn" data-url="${source.url}" data-index="${source.originalIndex}" data-external="true">
-                <i class="fas fa-${getSourceIcon(source.name)}"></i> ${source.name}
-            </button>
-        `).join('');
-        html += `</div>`;
-    }
-
-    // Social sources
-    if (groupedSources.social.length > 0) {
-        html += `<div class="source-group"><span class="source-group-title">社交平台</span>`;
-        html += groupedSources.social.map((source, idx) => `
+    // Anime websites
+    if (groupedSources.anime.length > 0) {
+        html += `<div class="source-group"><span class="source-group-title">动漫网站</span>`;
+        html += groupedSources.anime.map((source, idx) => `
             <button class="source-btn" data-url="${source.url}" data-index="${source.originalIndex}" data-external="true">
                 <i class="fas fa-${getSourceIcon(source.name)}"></i> ${source.name}
             </button>
