@@ -4,6 +4,12 @@
 let animeList = [];
 let favorites = JSON.parse(localStorage.getItem('animeFavorites')) || [];
 let showFavoritesOnly = false;
+let currentAnime = null;
+let videoSources = [];
+let currentEpisode = 1;
+
+// Video source API (using proxy to avoid CORS)
+const API_BASE = 'https://api.yaohud.cn/api/v5';
 
 // DOM Elements
 const animeGrid = document.getElementById('animeGrid');
@@ -19,6 +25,11 @@ const loading = document.getElementById('loading');
 const emptyState = document.getElementById('emptyState');
 const animeModal = document.getElementById('animeModal');
 const modalClose = document.getElementById('modalClose');
+const videoModal = document.getElementById('videoModal');
+const videoModalClose = document.getElementById('videoModalClose');
+const videoLoading = document.getElementById('videoLoading');
+const sourcesList = document.getElementById('sourcesList');
+const episodesList = document.getElementById('episodesList');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', init);
@@ -73,10 +84,29 @@ function setupEventListeners() {
         }
     });
     
+    // Video Modal
+    videoModalClose.addEventListener('click', closeVideoModal);
+    videoModal.addEventListener('click', (e) => {
+        if (e.target === videoModal) {
+            closeVideoModal();
+        }
+    });
+    
+    // Play button
+    const modalPlay = document.getElementById('modalPlay');
+    if (modalPlay) {
+        modalPlay.addEventListener('click', () => {
+            if (currentAnime) {
+                openVideoModal(currentAnime);
+            }
+        });
+    }
+    
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeModal();
+            closeVideoModal();
         }
     });
 }
@@ -209,6 +239,7 @@ function updateFavoritesCount() {
 
 // Open modal
 function openModal(anime) {
+    currentAnime = anime;
     const imageUrl = anime.images?.jpg?.large_image_url || anime.images?.webp?.large_image_url || anime.images?.jpg?.image_url || 'https://via.placeholder.com/300x450';
     
     document.getElementById('modalImage').src = imageUrl;
@@ -236,6 +267,12 @@ function openModal(anime) {
     favBtn.classList.toggle('active', isFavorite);
     favBtn.innerHTML = `<i class="fas fa-heart"></i> ${isFavorite ? '移除收藏' : '添加收藏'}`;
     favBtn.onclick = () => toggleFavorite(anime.id);
+    
+    // Play button visibility
+    const playBtn = document.getElementById('modalPlay');
+    if (playBtn) {
+        playBtn.style.display = anime.episodes ? 'inline-block' : 'none';
+    }
     
     // Show modal
     animeModal.classList.add('active');
@@ -269,4 +306,134 @@ function showError(message) {
             <p>${message}</p>
         </div>
     `;
+}
+
+// Video player functions
+async function openVideoModal(anime) {
+    currentAnime = anime;
+    currentEpisode = 1;
+    
+    // Show modal
+    videoModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    // Set title
+    document.getElementById('videoTitle').textContent = anime.title || 'Unknown';
+    document.getElementById('videoEpisode').textContent = `第 ${currentEpisode} 集`;
+    
+    // Show loading
+    videoLoading.style.display = 'flex';
+    document.querySelector('.video-player-container').style.display = 'none';
+    
+    // Search for video sources
+    await searchVideoSources(anime);
+}
+
+async function searchVideoSources(anime) {
+    try {
+        // Use title to search for video sources
+        const searchTitle = anime.title_english || anime.title;
+        
+        // Try to fetch from API (using JSONP or proxy)
+        const searchUrl = `${API_BASE}/yingshi?msg=${encodeURIComponent(searchTitle)}`;
+        
+        const response = await fetch(searchUrl);
+        const data = await response.json();
+        
+        videoLoading.style.display = 'none';
+        document.querySelector('.video-player-container').style.display = 'block';
+        
+        if (data && data.code === 200 && data.data) {
+            videoSources = data.data;
+            renderVideoSources();
+            renderEpisodes();
+            
+            // Auto play first source
+            if (videoSources.length > 0) {
+                playVideo(videoSources[0].url);
+            }
+        } else {
+            showVideoError('未找到播放源');
+        }
+    } catch (error) {
+        console.error('Error searching video sources:', error);
+        videoLoading.style.display = 'none';
+        document.querySelector('.video-player-container').style.display = 'block';
+        
+        // Fallback: show message to open in new tab
+        showVideoError('无法自动播放，请点击上方链接跳转观看');
+    }
+}
+
+function renderVideoSources() {
+    sourcesList.innerHTML = videoSources.map((source, index) => `
+        <button class="source-btn" data-url="${source.url}" data-index="${index}">
+            ${source.name || `播放源 ${index + 1}`}
+        </button>
+    `).join('');
+    
+    // Add click listeners
+    sourcesList.querySelectorAll('.source-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const url = btn.dataset.url;
+            playVideo(url);
+        });
+    });
+}
+
+function renderEpisodes() {
+    if (!currentAnime || !currentAnime.episodes) {
+        document.getElementById('videoEpisodes').style.display = 'none';
+        return;
+    }
+    
+    document.getElementById('videoEpisodes').style.display = 'block';
+    const totalEpisodes = currentAnime.episodes;
+    
+    episodesList.innerHTML = '';
+    for (let i = 1; i <= Math.min(totalEpisodes, 100); i++) {
+        const epBtn = document.createElement('button');
+        epBtn.className = `episode-btn ${i === currentEpisode ? 'active' : ''}`;
+        epBtn.textContent = i;
+        epBtn.addEventListener('click', () => {
+            currentEpisode = i;
+            document.getElementById('videoEpisode').textContent = `第 ${i} 集`;
+            renderEpisodes();
+            // In a real implementation, you'd fetch the episode-specific URL
+        });
+        episodesList.appendChild(epBtn);
+    }
+}
+
+function playVideo(url) {
+    const videoEmbed = document.getElementById('videoEmbed');
+    
+    // Check if it's a direct video URL or needs iframe
+    if (url.includes('iframe') || url.startsWith('http')) {
+        videoEmbed.innerHTML = `<iframe src="${url}" frameborder="0" allowfullscreen></iframe>`;
+    } else {
+        videoEmbed.innerHTML = `<video controls><source src="${url}" type="video/mp4">您的浏览器不支持视频播放</video>`;
+    }
+}
+
+function showVideoError(message) {
+    const videoEmbed = document.getElementById('videoEmbed');
+    videoEmbed.innerHTML = `
+        <div class="video-error">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>${message}</p>
+            <a href="https://www.bilibili.com/search?keyword=${encodeURIComponent(currentAnime?.title || '')}" target="_blank" class="btn btn-primary">
+                <i class="fas fa-external-link-alt"></i> 在B站搜索
+            </a>
+        </div>
+    `;
+}
+
+function closeVideoModal() {
+    videoModal.classList.remove('active');
+    document.body.style.overflow = '';
+    
+    // Clear video
+    document.getElementById('videoEmbed').innerHTML = '';
+    videoSources = [];
 }

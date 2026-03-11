@@ -117,14 +117,51 @@
                     <div class="modal-studios" id="modalStudios"></div>
                     <p class="modal-synopsis" id="modalSynopsis"></p>
                     <div class="modal-actions">
-                        <a id="modalLink" href="" target="_blank" class="btn btn-primary">
+                        <button id="modalPlay" class="btn btn-primary">
+                            <i class="fas fa-play"></i> 播放
+                        </button>
+                        <a id="modalLink" href="" target="_blank" class="btn btn-secondary">
                             <i class="fas fa-external-link-alt"></i> 在MyAnimeList查看
                         </a>
-                        <button id="modalFavorite" class="btn btn-secondary">
+                        <button id="modalFavorite" class="btn btn-outline">
                             <i class="fas fa-heart"></i> 添加收藏
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Video Player Modal -->
+    <div id="videoModal" class="modal video-modal">
+        <div class="modal-content video-modal-content">
+            <button class="modal-close" id="videoModalClose">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="video-player-container">
+                <div class="video-header">
+                    <h3 id="videoTitle"></h3>
+                    <span id="videoEpisode"></span>
+                </div>
+                <div class="video-embed" id="videoEmbed">
+                    <!-- Video player will be inserted here -->
+                </div>
+                <div class="video-sources" id="videoSources">
+                    <h4>选择播放源</h4>
+                    <div class="sources-list" id="sourcesList">
+                        <!-- Sources will be inserted here -->
+                    </div>
+                </div>
+                <div class="video-episodes" id="videoEpisodes">
+                    <h4>选择集数</h4>
+                    <div class="episodes-list" id="episodesList">
+                        <!-- Episodes will be inserted here -->
+                    </div>
+                </div>
+            </div>
+            <div class="video-loading" id="videoLoading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>正在搜索播放源...</p>
             </div>
         </div>
     </div>
