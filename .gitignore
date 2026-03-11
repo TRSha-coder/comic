@@ -9,7 +9,7 @@ env/
 .venv/
 
 # IDE
-.vscode/
+.vscore/
 .idea/
 *.swp
 *.swo
@@ -18,9 +18,12 @@ env/
 .DS_Store
 Thumbs.db
 
-# Project specific
-data/
-downloads/
+# Project specific (but allow JSON data)
+# data/ - uncomment if you want to ignore entire folder
+# downloads/
 *.cbz
 *.cbr
 *.pdf
+
+# Allow JSON files in data folder
+!data/*.json
