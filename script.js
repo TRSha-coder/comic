@@ -347,6 +347,9 @@ async function openVideoModal(anime) {
 // Video source API
 // Note: Due to CORS restrictions, we'll use direct search links as primary method
 const VIDEO_SEARCH_SOURCES = [
+    // 直接播放
+    { name: 'YouTube', searchUrl: 'https://www.youtube.com/results?search_query=', searchParam: 'q', icon: 'youtube', type: 'embed' },
+    { name: '📺 本地视频', searchUrl: '', searchParam: '', icon: 'video', type: 'local' },
     // 主流视频平台
     { name: 'B站', searchUrl: 'https://search.bilibili.com/video?keyword=', searchParam: 'keyword', icon: 'bilibili' },
     { name: 'B站漫画', searchUrl: 'https://manga.bilibili.com/search?word=', searchParam: 'word', icon: 'bilibili' },
@@ -354,7 +357,11 @@ const VIDEO_SEARCH_SOURCES = [
     { name: '优酷', searchUrl: 'https://search.youku.com/search_video?keyword=', searchParam: 'keyword', icon: 'youku' },
     { name: '爱奇艺', searchUrl: 'https://so.iq.com/?w=', searchParam: 'w', icon: 'iqiyi' },
     { name: '腾讯视频', searchUrl: 'https://v.qq.com/x/search/?q=', searchParam: 'q', icon: 'tencent' },
-    // 第三方动漫网站 (使用搜索引擎)
+    // 网盘
+    { name: '百度网盘', searchUrl: 'https://pan.baidu.com/search?keyword=', searchParam: 'word', icon: 'cloud' },
+    { name: '阿里云盘', searchUrl: 'https://www.alipan.com/search?keyword=', searchParam: 'keyword', icon: 'cloud' },
+    { name: '夸克网盘', searchUrl: 'https://pan.quark.cn/search?keyword=', searchParam: 'keyword', icon: 'cloud' },
+    // 搜索引擎
     { name: 'Google', searchUrl: 'https://www.google.com/search?q=', searchParam: 'q', icon: 'google' },
     { name: 'Bing', searchUrl: 'https://www.bing.com/search?q=', searchParam: 'q', icon: 'bing' },
     { name: '百度', searchUrl: 'https://www.baidu.com/s?wd=', searchParam: 'wd', icon: 'baidu' }
@@ -362,53 +369,60 @@ const VIDEO_SEARCH_SOURCES = [
 
 // Video source quality categories
 const SOURCE_CATEGORIES = {
+    embed: ['YouTube'],
+    local: ['📺 本地视频'],
     primary: ['B站', 'B站漫画', 'AcFun', '优酷', '爱奇艺', '腾讯视频'],
+    cloud: ['百度网盘', '阿里云盘', '夸克网盘'],
     search: ['Google', 'Bing', '百度']
 };
+
+let currentVideoPlayer = null;
 
 async function searchVideoSources(anime) {
     try {
         // Use English title for search (more likely to work on Chinese platforms)
-        // Also try Japanese title for better results
         const searchTitle = anime.title_english || anime.title;
-        const searchJapanese = anime.titleTitle_japanese || '';
+        const searchJapanese = anime.title_japanese || '';
 
         videoLoading.style.display = 'none';
         document.querySelector('.video-player-container').style.display = 'block';
 
         // Create search source buttons with better titles
         videoSources = VIDEO_SEARCH_SOURCES.map((source) => {
+            let query = searchTitle;
+            let type = source.type || 'external';
+            
+            if (source.name === 'YouTube') {
+                query = `${searchTitle} episode 1`;
+            } else if (source.name.includes('网盘') || source.name.includes('云盘')) {
+                query = `${searchTitle} 动漫`;
+            }
+            
             return {
                 name: source.name,
                 category: getSourceCategory(source.name),
-                url: `${source.searchUrl}${encodeURIComponent(searchTitle)}`,
+                url: source.searchUrl ? `${source.searchUrl}${encodeURIComponent(query)}` : '',
                 icon: source.icon || 'external-link',
-                isExternal: true
+                isExternal: type === 'external',
+                type: type
             };
         });
 
         renderVideoSources(searchTitle);
         renderEpisodes();
 
-        // Auto-open B站 as primary source for better UX
-        const bilibiliSource = videoSources.find(s => s.name === 'B站');
-        if (bilibiliSource) {
-            // Pre-select B站 but don't auto-open
-            console.log('Primary source available: B站');
-        }
-
     } catch (error) {
         console.error('Error searching video sources:', error);
-        videoLoading.style.display = 'none';
-        document.querySelector('.video-player-container').style.display = 'block';
-
-        showVideoError('无法自动播放，请点击上方链接跳转观看');
+        showVideoError('无法加载播放源');
     }
 }
 
 // Get source category for UI grouping
 function getSourceCategory(sourceName) {
+    if (SOURCE_CATEGORIES.embed.includes(sourceName)) return 'embed';
+    if (SOURCE_CATEGORIES.local.includes(sourceName)) return 'local';
     if (SOURCE_CATEGORIES.primary.includes(sourceName)) return 'primary';
+    if (SOURCE_CATEGORIES.cloud.includes(sourceName)) return 'cloud';
     if (SOURCE_CATEGORIES.search.includes(sourceName)) return 'search';
     return 'other';
 }
@@ -432,7 +446,10 @@ function getSourceIcon(sourceName) {
 function renderVideoSources(searchTitle) {
     // Group sources by category
     const groupedSources = {
+        embed: [],
+        local: [],
         primary: [],
+        cloud: [],
         search: [],
         other: []
     };
@@ -445,11 +462,44 @@ function renderVideoSources(searchTitle) {
 
     let html = '';
 
+    // Direct play sources
+    if (groupedSources.embed.length > 0) {
+        html += `<div class="source-group"><span class="source-group-title">🎬 直接播放</span>`;
+        html += groupedSources.embed.map((source) => `
+            <button class="source-btn active" data-url="${source.url}" data-index="${source.originalIndex}" data-type="youtube">
+                <i class="fab fa-youtube"></i> ${source.name}
+            </button>
+        `).join('');
+        html += `</div>`;
+    }
+
+    // Local video
+    if (groupedSources.local.length > 0) {
+        html += `<div class="source-group"><span class="source-group-title">📁 本地/URL播放</span>`;
+        html += groupedSources.local.map((source) => `
+            <button class="source-btn" data-index="${source.originalIndex}" data-type="local">
+                <i class="fas fa-video"></i> 输入视频地址播放
+            </button>
+        `).join('');
+        html += `</div>`;
+    }
+
     // Primary sources (video platforms)
     if (groupedSources.primary.length > 0) {
         html += `<div class="source-group"><span class="source-group-title">在线观看</span>`;
-        html += groupedSources.primary.map((source, idx) => `
-            <button class="source-btn ${source.originalIndex === 0 ? 'active' : ''}" data-url="${source.url}" data-index="${source.originalIndex}" data-external="true">
+        html += groupedSources.primary.map((source) => `
+            <button class="source-btn" data-url="${source.url}" data-index="${source.originalIndex}" data-type="external">
+                <i class="fas fa-${getSourceIcon(source.name)}"></i> ${source.name}
+            </button>
+        `).join('');
+        html += `</div>`;
+    }
+
+    // Cloud storage
+    if (groupedSources.cloud.length > 0) {
+        html += `<div class="source-group"><span class="source-group-title">网盘资源</span>`;
+        html += groupedSources.cloud.map((source) => `
+            <button class="source-btn" data-url="${source.url}" data-index="${source.originalIndex}" data-type="external">
                 <i class="fas fa-${getSourceIcon(source.name)}"></i> ${source.name}
             </button>
         `).join('');
@@ -459,8 +509,8 @@ function renderVideoSources(searchTitle) {
     // Search engines
     if (groupedSources.search.length > 0) {
         html += `<div class="source-group"><span class="source-group-title">搜索引擎</span>`;
-        html += groupedSources.search.map((source, idx) => `
-            <button class="source-btn" data-url="${source.url}" data-index="${source.originalIndex}" data-external="true">
+        html += groupedSources.search.map((source) => `
+            <button class="source-btn" data-url="${source.url}" data-index="${source.originalIndex}" data-type="external">
                 <i class="fas fa-${getSourceIcon(source.name)}"></i> ${source.name}
             </button>
         `).join('');
@@ -472,10 +522,62 @@ function renderVideoSources(searchTitle) {
     // Add click listeners
     sourcesList.querySelectorAll('.source-btn').forEach(btn => {
         btn.addEventListener('click', () => {
+            const type = btn.dataset.type;
             const url = btn.dataset.url;
-            const isExternal = btn.dataset.external === 'true';
-            playVideo(url, isExternal);
+            
+            if (type === 'youtube') {
+                window.open(url, '_blank');
+            } else if (type === 'local') {
+                showLocalVideoInput();
+            } else {
+                window.open(url, '_blank');
+            }
         });
+    });
+}
+
+// Show local video input
+function showLocalVideoInput() {
+    const videoEmbed = document.getElementById('videoEmbed');
+    videoEmbed.innerHTML = `
+        <div class="local-video-input">
+            <h3>📺 输入视频地址播放</h3>
+            <p>支持 MP4, WebM, M3U8 (HLS) 等格式</p>
+            <input type="text" id="videoUrlInput" placeholder="粘贴视频URL..." 
+                   style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin: 10px 0;">
+            <button class="btn btn-primary" onclick="playLocalVideo()">
+                <i class="fas fa-play"></i> 播放
+            </button>
+        </div>
+    `;
+}
+
+// Play local video using Video.js
+function playLocalVideo() {
+    const url = document.getElementById('videoUrlInput').value.trim();
+    if (!url) {
+        alert('请输入视频地址');
+        return;
+    }
+    
+    const videoEmbed = document.getElementById('videoEmbed');
+    
+    if (currentVideoPlayer) {
+        currentVideoPlayer.dispose();
+    }
+    
+    videoEmbed.innerHTML = `
+        <video id="local-video-player" class="video-js vjs-big-play-centered" 
+               controls preload="auto" width="100%" height="400"
+               data-setup='{"fluid": true}'>
+            <source src="${url}" type="video/mp4" />
+            <p class="vjs-no-js">您的浏览器不支持视频播放</p>
+        </video>
+    `;
+    
+    currentVideoPlayer = videojs('local-video-player');
+    currentVideoPlayer.play().catch(e => {
+        console.error('播放失败:', e);
     });
 }
 
