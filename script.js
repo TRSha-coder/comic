@@ -46,9 +46,11 @@ async function loadAnimeData() {
         loading.style.display = 'block';
         emptyState.style.display = 'none';
         
-        // Detect if running on GitHub Pages
-        const isGitHubPages = window.location.hostname.includes('github.io');
-        const dataUrl = isGitHubPages ? '/comic/data/anime.json' : 'data/anime.json';
+        // Always use absolute path for GitHub Pages compatibility
+        const basePath = window.location.pathname.includes('/comic/') ? '/comic' : '';
+        const dataUrl = `${basePath}/data/anime.json`;
+        
+        console.log('Fetching from:', dataUrl);
         
         const response = await fetch(dataUrl);
         
