@@ -8,6 +8,69 @@ let currentAnime = null;
 let videoSources = [];
 let currentEpisode = 1;
 
+// 动漫中文名称映射表
+const animeChineseNames = {
+    52991: "葬送的芙莉莲",
+    59978: "葬送的芙莉莲 第二季",
+    5114: "钢之炼金术师  Brotherhood",
+    57555: "怪物",
+    9253: "交响诗篇",
+    38524: "辉夜大小姐想让我告白",
+    28977: "银魂",
+    39486: "排球少年",
+    11061: "青之驱魔师",
+    60022: "胆大党",
+    9969: "石纪元",
+    15417: "冻结的果实",
+    820: "攻壳机动队",
+    34096: "我的英雄学院",
+    41467: "赛马娘 Pretty Derby",
+    43608: "总之就是非常可爱",
+    42938: "辉夜姬物语",
+    4181: "凉宫春日的忧郁",
+    918: "Gundam Wing",
+    28851: "四月是你的谎言",
+    58514: "我推的孩子",
+    2904: "魔法少女小圆",
+    35180: "约定的梦幻岛",
+    15335: "麻辣教师GTO",
+    19: "死神",
+    37491: "咒术回战",
+    51535: "间谍过家家",
+    35247: "IDOLiSH7",
+    54492: "我独自升级",
+    40682: "布鲁伊",
+    59571: "迷宫饭",
+    37987: "炎炎消防队",
+    49387: "Dr.STONE 新石纪",
+    32281: "紫罗兰永恒花园",
+    36838: "文豪野犬",
+    37510: "国王排名",
+    31758: "DARLING in the FRANXX",
+    2921: "翼·年代记",
+    40028: "莉可丽丝",
+    37521: "多拉贡",
+    263: "幽游白书",
+    32935: "齐木楠雄的灾难",
+    199: "航海王",
+    48583: "蓝色监狱",
+    60489: "괴짜 조커",
+    17074: "黑子的篮球",
+    1: "传奇的战士",
+    53223: "黑暗集会",
+    47917: "不死之王",
+    50160: "水星的魔术师"
+};
+
+// 获取动漫的中文名称
+function getChineseName(anime) {
+    if (animeChineseNames[anime.id]) {
+        return animeChineseNames[anime.id];
+    }
+    // 如果没有映射，返回日文标题（带汉字）
+    return anime.title_japanese || anime.title_english || anime.title || 'Unknown';
+}
+
 // Video source API (using proxy to avoid CORS)
 const API_BASE = 'https://api.yaohud.cn/api/v5';
 
@@ -145,11 +208,11 @@ function renderAnime(anime) {
 function createAnimeCard(anime) {
     const card = document.createElement('div');
     card.className = 'anime-card';
-    
+
     const isFavorite = favorites.includes(anime.id);
     const imageUrl = anime.images?.jpg?.image_url || anime.images?.webp?.image_url || 'https://via.placeholder.com/300x450';
-    // 优先显示日文标题（带汉字），其次英文，最后原始标题
-    const title = anime.title_japanese || anime.title_english || anime.title || 'Unknown';
+    // 使用中文名称
+    const title = getChineseName(anime);
     const score = anime.score || 'N/A';
     const rank = anime.rank || '';
     const type = anime.type || 'Unknown';
@@ -259,8 +322,8 @@ function openModal(anime) {
     const imageUrl = anime.images?.jpg?.large_image_url || anime.images?.webp?.large_image_url || anime.images?.jpg?.image_url || 'https://via.placeholder.com/300x450';
     
     document.getElementById('modalImage').src = imageUrl;
-    document.getElementById('modalTitle').textContent = anime.title || 'Unknown';
-    document.getElementById('modalTitleEnglish').textContent = anime.title_english || '';
+    document.getElementById('modalTitle').textContent = getChineseName(anime);
+    document.getElementById('modalTitleEnglish').textContent = anime.title_english || anime.title || '';
     document.getElementById('modalType').textContent = anime.type || 'Unknown';
     document.getElementById('modalEpisodes').textContent = anime.episodes ? `${anime.episodes}集` : 'Unknown';
     document.getElementById('modalStatus').textContent = anime.status || 'Unknown';
@@ -334,7 +397,7 @@ async function openVideoModal(anime) {
     document.body.style.overflow = 'hidden';
     
     // Set title
-    document.getElementById('videoTitle').textContent = anime.title || 'Unknown';
+    document.getElementById('videoTitle').textContent = getChineseName(anime);
     document.getElementById('videoEpisode').textContent = `第 ${currentEpisode} 集`;
     
     // Show loading
