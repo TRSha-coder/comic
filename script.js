@@ -46,11 +46,14 @@ async function loadAnimeData() {
         loading.style.display = 'block';
         emptyState.style.display = 'none';
         
-        // Try fetching from current location first
-        let response = await fetch('data/anime.json');
+        let response;
         
-        // If that fails, try the GitHub Pages path
-        if (!response.ok) {
+        // Try fetching from current location first (for local development)
+        const localResponse = await fetch('data/anime.json');
+        if (localResponse.ok) {
+            response = localResponse;
+        } else {
+            // Try the GitHub Pages path
             response = await fetch('/comic/data/anime.json');
         }
         
