@@ -148,7 +148,8 @@ function createAnimeCard(anime) {
     
     const isFavorite = favorites.includes(anime.id);
     const imageUrl = anime.images?.jpg?.image_url || anime.images?.webp?.image_url || 'https://via.placeholder.com/300x450';
-    const title = anime.title_english || anime.title || 'Unknown';
+    // 优先显示日文标题（带汉字），其次英文，最后原始标题
+    const title = anime.title_japanese || anime.title_english || anime.title || 'Unknown';
     const score = anime.score || 'N/A';
     const rank = anime.rank || '';
     const type = anime.type || 'Unknown';
